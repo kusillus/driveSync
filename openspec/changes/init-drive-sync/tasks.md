@@ -31,12 +31,12 @@
 
 ## 6. Interfaz de Terminal (TUI) con Bubbletea
 
-- [ ] 6.1 Configurar modelo base `tea.Model` y estructura del estado de la aplicación
-- [ ] 6.2 Implementar el panel lateral izquierdo con listado de archivos locales y estados (`✔`, `⟳`, `⬆`)
-- [ ] 6.3 Implementar el panel derecho con el detalle del archivo seleccionado
-- [ ] 6.4 Implementar la barra inferior de atajos de teclado y la barra de progreso de subida activa (usando `bubbles/progress`)
-- [ ] 6.5 Implementar la vista del Help/README embebido (reemplaza la pantalla principal al presionar `h`)
-- [ ] 6.6 Conectar el motor de sincronización con la UI enviando mensajes de progreso en goroutines usando comandos `tea.Cmd`
+- [x] 6.1 Configurar modelo base `tea.Model` y estructura del estado de la aplicación
+- [x] 6.2 Implementar el panel lateral izquierdo con listado de archivos locales y estados (`✔`, `⟳`, `⬆`)
+- [x] 6.3 Implementar el panel derecho con el detalle del archivo seleccionado
+- [x] 6.4 Implementar la barra inferior de atajos de teclado y la barra de progreso de subida activa (usando `bubbles/progress`)
+- [x] 6.5 Implementar la vista del Help/README embebido (reemplaza la pantalla principal al presionar `h`)
+- [x] 6.6 Conectar el motor de sincronización con la UI enviando mensajes de progreso en goroutines usando comandos `tea.Cmd`
 
 ## 7. Main Entrypoint & Config
 
