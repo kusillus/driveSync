@@ -5,7 +5,7 @@
 .opencode/
 
 # Compiled binaries
-drivesync
+/drivesync
 
 # Local database & config files
 *.db

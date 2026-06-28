@@ -40,9 +40,9 @@
 
 ## 7. Main Entrypoint & Config
 
-- [ ] 7.1 Crear el punto de entrada principal en `cmd/drivesync/main.go`
-- [ ] 7.2 Implementar parseo del archivo de configuración `config.yaml` y resolución de rutas de sistema (`~/.config/drivesync/`)
-- [ ] 7.3 Crear plantilla base de ejemplo `config.yaml.example`
+- [x] 7.1 Crear el punto de entrada principal en `cmd/drivesync/main.go`
+- [x] 7.2 Implementar parseo del archivo de configuración `config.yaml` y resolución de rutas de sistema (`~/.config/drivesync/`)
+- [x] 7.3 Crear plantilla base de ejemplo `config.yaml.example`
 
 ## 8. Documentación
 
