@@ -202,7 +202,12 @@ func (sc *SyncCoordinator) Sync(ctx context.Context, mappings []domain.SyncFolde
 
 			_ = sc.repo.UpdateStatus(ctx, up.Path, domain.StatusUploading, "")
 
-			driveID, uploadErr := sc.cloud.UploadFile(ctx, up.Path, mapping.DriveFolderID, fileChan)
+			relPath, err := filepath.Rel(mapping.LocalPath, up.Path)
+			if err != nil {
+				relPath = filepath.Base(up.Path)
+			}
+
+			driveID, uploadErr := sc.cloud.UploadFile(ctx, up.Path, relPath, mapping.DriveFolderID, fileChan)
 			close(fileChan)
 			close(doneChan)
 
