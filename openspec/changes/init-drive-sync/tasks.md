@@ -26,8 +26,8 @@
 
 ## 5. Sync Engine Lógica
 
-- [ ] 5.1 Implementar escáner del sistema de archivos local que compare archivos contra la DB para marcar archivos nuevos o modificados como `pending`
-- [ ] 5.2 Implementar motor de sincronización (`SyncCoordinator`) que escanee local y remoto, encole subidas y descargas, y ejecute en goroutines enviando progreso mediante canales de Go
+- [x] 5.1 Implementar escáner del sistema de archivos local que compare archivos contra la DB para marcar archivos nuevos o modificados como `pending`
+- [x] 5.2 Implementar motor de sincronización (`SyncCoordinator`) que escanee local y remoto, encole subidas y descargas, y ejecute en goroutines enviando progreso mediante canales de Go
 
 ## 6. Interfaz de Terminal (TUI) con Bubbletea
 
