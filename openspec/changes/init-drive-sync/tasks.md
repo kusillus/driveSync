@@ -19,10 +19,10 @@
 
 ## 4. Google Drive Cloud Adapter
 
-- [ ] 4.1 Implementar servidor HTTP loopback temporal en Go para capturar el token de redirección de OAuth 2.0 y guardarlo en `token.json`
-- [ ] 4.2 Implementar adaptador `GDriveAdapter` que implemente `CloudStoragePort` utilizando la SDK de Google Drive v3
-- [ ] 4.3 Implementar carga resumible (Resumable Upload) de Google Drive para soportar archivos de gran tamaño sin interrupción
-- [ ] 4.4 Implementar descarga de archivos desde Drive
+- [x] 4.1 Implementar servidor HTTP loopback temporal en Go para capturar el token de redirección de OAuth 2.0 y guardarlo en `token.json`
+- [x] 4.2 Implementar adaptador `GDriveAdapter` que implemente `CloudStoragePort` utilizando la SDK de Google Drive v3
+- [x] 4.3 Implementar carga resumible (Resumable Upload) de Google Drive para soportar archivos de gran tamaño sin interrupción
+- [x] 4.4 Implementar descarga de archivos desde Drive
 
 ## 5. Sync Engine Lógica
 
