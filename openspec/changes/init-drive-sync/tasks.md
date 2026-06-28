@@ -6,10 +6,10 @@
 
 ## 2. Domain Layer
 
-- [ ] 2.1 Definir estructura `FileMetadata` (`Path`, `Size`, `MTime`, `DriveID`, `Status`, `LastUploadedAt`, `LastSyncedAt`)
-- [ ] 2.2 Definir interfaz `MetadataRepository` (métodos: `Save`, `FindByPath`, `UpdateStatus`, `ListPending`, `ListAll`)
-- [ ] 2.3 Definir interfaz `CloudStoragePort` (métodos: `Authenticate`, `UploadFile`, `DownloadFile`, `ListRemoteFolder`)
-- [ ] 2.4 Definir estructuras de configuración: `Config` y `SyncFolderMapping` (`LocalPath`, `DriveFolderID`)
+- [x] 2.1 Definir estructura `FileMetadata` (`Path`, `Size`, `MTime`, `DriveID`, `Status`, `LastUploadedAt`, `LastSyncedAt`)
+- [x] 2.2 Definir interfaz `MetadataRepository` (métodos: `Save`, `FindByPath`, `UpdateStatus`, `ListPending`, `ListAll`)
+- [x] 2.3 Definir interfaz `CloudStoragePort` (métodos: `Authenticate`, `UploadFile`, `DownloadFile`, `ListRemoteFolder`)
+- [x] 2.4 Definir estructuras de configuración: `Config` y `SyncFolderMapping` (`LocalPath`, `DriveFolderID`)
 
 ## 3. SQLite Metadata Adapter
 
