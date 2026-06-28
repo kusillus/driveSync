@@ -33,7 +33,7 @@ func (m *MockRepository) ListAll(ctx context.Context) ([]*domain.FileMetadata, e
 type MockCloud struct{}
 
 func (m *MockCloud) Authenticate(ctx context.Context) error { return nil }
-func (m *MockCloud) UploadFile(ctx context.Context, localPath string, driveFolderID string, progressChan chan<- int64) (string, error) {
+func (m *MockCloud) UploadFile(ctx context.Context, localPath string, relativePath string, driveFolderID string, progressChan chan<- int64) (string, error) {
 	return "", nil
 }
 func (m *MockCloud) DownloadFile(ctx context.Context, driveID string, destPath string, progressChan chan<- int64) error {

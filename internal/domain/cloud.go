@@ -16,7 +16,7 @@ type RemoteFile struct {
 // CloudStoragePort defines the interface for interacting with Google Drive
 type CloudStoragePort interface {
 	Authenticate(ctx context.Context) error
-	UploadFile(ctx context.Context, localPath string, driveFolderID string, progressChan chan<- int64) (string, error)
+	UploadFile(ctx context.Context, localPath string, relativePath string, driveFolderID string, progressChan chan<- int64) (string, error)
 	DownloadFile(ctx context.Context, driveID string, destPath string, progressChan chan<- int64) error
 	ListRemoteFolder(ctx context.Context, driveFolderID string) ([]RemoteFile, error)
 }

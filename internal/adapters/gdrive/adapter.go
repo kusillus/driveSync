@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"driveSync/internal/domain"
@@ -18,11 +19,13 @@ import (
 type GDriveAdapter struct {
 	oauthManager *OAuthManager
 	srv          *drive.Service
+	folderCache  map[string]string
 }
 
 func NewGDriveAdapter(oauthManager *OAuthManager) *GDriveAdapter {
 	return &GDriveAdapter{
 		oauthManager: oauthManager,
+		folderCache:  make(map[string]string),
 	}
 }
 
@@ -61,8 +64,69 @@ func (pr *ProgressReader) Read(p []byte) (int, error) {
 	return n, err
 }
 
+func (a *GDriveAdapter) findOrCreateFolder(ctx context.Context, parentID string, name string) (string, error) {
+	query := fmt.Sprintf("'%s' in parents and name = '%s' and mimeType = 'application/vnd.google-apps.folder' and trashed = false", parentID, strings.ReplaceAll(name, "'", "\\'"))
+	call := a.srv.Files.List().Q(query).Fields("files(id)")
+	call.Context(ctx)
+	res, err := call.Do()
+	if err != nil {
+		return "", fmt.Errorf("failed to search for folder %s: %w", name, err)
+	}
+
+	if len(res.Files) > 0 {
+		return res.Files[0].Id, nil
+	}
+
+	driveFile := &drive.File{
+		Name:     name,
+		MimeType: "application/vnd.google-apps.folder",
+		Parents:  []string{parentID},
+	}
+	createCall := a.srv.Files.Create(driveFile).Fields("id")
+	createCall.Context(ctx)
+	newFolder, err := createCall.Do()
+	if err != nil {
+		return "", fmt.Errorf("failed to create folder %s: %w", name, err)
+	}
+
+	return newFolder.Id, nil
+}
+
+func (a *GDriveAdapter) resolveParentFolderID(ctx context.Context, rootFolderID string, relPath string) (string, error) {
+	dir := filepath.Dir(relPath)
+	if dir == "." || dir == "" || dir == "/" {
+		return rootFolderID, nil
+	}
+
+	dir = filepath.ToSlash(dir)
+	parts := strings.Split(dir, "/")
+
+	currentParentID := rootFolderID
+	for _, part := range parts {
+		if part == "" || part == "." {
+			continue
+		}
+
+		cacheKey := currentParentID + "/" + part
+		if cachedID, ok := a.folderCache[cacheKey]; ok {
+			currentParentID = cachedID
+			continue
+		}
+
+		folderID, err := a.findOrCreateFolder(ctx, currentParentID, part)
+		if err != nil {
+			return "", err
+		}
+
+		a.folderCache[cacheKey] = folderID
+		currentParentID = folderID
+	}
+
+	return currentParentID, nil
+}
+
 // UploadFile uploads a local file to a Google Drive folder using resumable chunks
-func (a *GDriveAdapter) UploadFile(ctx context.Context, localPath string, driveFolderID string, progressChan chan<- int64) (string, error) {
+func (a *GDriveAdapter) UploadFile(ctx context.Context, localPath string, relativePath string, driveFolderID string, progressChan chan<- int64) (string, error) {
 	if a.srv == nil {
 		return "", fmt.Errorf("google drive service not initialized")
 	}
@@ -78,10 +142,15 @@ func (a *GDriveAdapter) UploadFile(ctx context.Context, localPath string, driveF
 		return "", fmt.Errorf("failed to stat file: %w", err)
 	}
 
+	parentID, err := a.resolveParentFolderID(ctx, driveFolderID, relativePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve parent folder ID: %w", err)
+	}
+
 	fileName := filepath.Base(localPath)
 	driveFile := &drive.File{
 		Name:    fileName,
-		Parents: []string{driveFolderID},
+		Parents: []string{parentID},
 	}
 
 	progressReader := &ProgressReader{
@@ -145,36 +214,57 @@ func (a *GDriveAdapter) DownloadFile(ctx context.Context, driveID string, destPa
 	return nil
 }
 
-// ListRemoteFolder lists files located in a specific Google Drive folder
+// ListRemoteFolder lists files located in a specific Google Drive folder and its subfolders recursively
 func (a *GDriveAdapter) ListRemoteFolder(ctx context.Context, driveFolderID string) ([]domain.RemoteFile, error) {
 	if a.srv == nil {
 		return nil, fmt.Errorf("google drive service not initialized")
 	}
 
-	query := fmt.Sprintf("'%s' in parents and trashed = false", driveFolderID)
-	// Fetch ID, Name, Size, and ModifiedTime
-	call := a.srv.Files.List().Q(query).Fields("files(id, name, size, modifiedTime)")
-	call.Context(ctx)
-
-	res, err := call.Do()
-	if err != nil {
-		return nil, fmt.Errorf("failed to list drive files: %w", err)
+	type queueItem struct {
+		id      string
+		relPath string
 	}
 
+	queue := []queueItem{{id: driveFolderID, relPath: ""}}
 	var files []domain.RemoteFile
-	for _, f := range res.Files {
-		mtime, err := time.Parse(time.RFC3339, f.ModifiedTime)
+
+	for len(queue) > 0 {
+		curr := queue[0]
+		queue = queue[1:]
+
+		query := fmt.Sprintf("'%s' in parents and trashed = false", curr.id)
+		call := a.srv.Files.List().Q(query).Fields("files(id, name, size, modifiedTime, mimeType)")
+		call.Context(ctx)
+
+		res, err := call.Do()
 		if err != nil {
-			// Fallback if parsing fails
-			mtime = time.Now()
+			return nil, fmt.Errorf("failed to list drive files in %s (rel: %s): %w", curr.id, curr.relPath, err)
 		}
 
-		files = append(files, domain.RemoteFile{
-			ID:    f.Id,
-			Name:  f.Name,
-			Size:  f.Size,
-			MTime: mtime,
-		})
+		for _, f := range res.Files {
+			var itemRelPath string
+			if curr.relPath == "" {
+				itemRelPath = f.Name
+			} else {
+				itemRelPath = filepath.Join(curr.relPath, f.Name)
+			}
+
+			if f.MimeType == "application/vnd.google-apps.folder" {
+				queue = append(queue, queueItem{id: f.Id, relPath: itemRelPath})
+			} else {
+				mtime, err := time.Parse(time.RFC3339, f.ModifiedTime)
+				if err != nil {
+					mtime = time.Now()
+				}
+
+				files = append(files, domain.RemoteFile{
+					ID:    f.Id,
+					Name:  itemRelPath,
+					Size:  f.Size,
+					MTime: mtime,
+				})
+			}
+		}
 	}
 
 	return files, nil

@@ -67,19 +67,31 @@ func (m *MockMetadataRepository) ListAll(ctx context.Context) ([]*domain.FileMet
 	return list, nil
 }
 
+type UploadInfo struct {
+	LocalPath    string
+	RelativePath string
+	FolderID     string
+}
+
 // MockCloudStoragePort implements domain.CloudStoragePort
 type MockCloudStoragePort struct {
-	remoteFiles []domain.RemoteFile
+	remoteFiles   []domain.RemoteFile
+	uploadedFiles []UploadInfo
 }
 
 func (m *MockCloudStoragePort) Authenticate(ctx context.Context) error {
 	return nil
 }
 
-func (m *MockCloudStoragePort) UploadFile(ctx context.Context, localPath string, driveFolderID string, progressChan chan<- int64) (string, error) {
+func (m *MockCloudStoragePort) UploadFile(ctx context.Context, localPath string, relativePath string, driveFolderID string, progressChan chan<- int64) (string, error) {
 	if progressChan != nil {
 		progressChan <- 100
 	}
+	m.uploadedFiles = append(m.uploadedFiles, UploadInfo{
+		LocalPath:    localPath,
+		RelativePath: relativePath,
+		FolderID:     driveFolderID,
+	})
 	return "drive-id-new", nil
 }
 
@@ -87,6 +99,8 @@ func (m *MockCloudStoragePort) DownloadFile(ctx context.Context, driveID string,
 	if progressChan != nil {
 		progressChan <- 100
 	}
+	// Ensure parent dir exists
+	_ = os.MkdirAll(filepath.Dir(destPath), 0755)
 	// Create dummy destination file
 	_ = os.WriteFile(destPath, []byte("data"), 0644)
 	return nil
@@ -215,6 +229,100 @@ func TestSyncCoordinator_Sync(t *testing.T) {
 	}
 
 	metaDownload, _ := repo.FindByPath(ctx, downloadedPath)
+	if metaDownload.Status != domain.StatusSynced {
+		t.Errorf("expected download file to be synced, got %s", metaDownload.Status)
+	}
+}
+
+func TestSyncCoordinator_SyncHierarchical(t *testing.T) {
+	tempDir := t.TempDir()
+
+	// Create a nested local file that needs uploading
+	subDir := filepath.Join(tempDir, "upload_subfolder")
+	if err := os.MkdirAll(subDir, 0755); err != nil {
+		t.Fatalf("failed to create subfolder: %v", err)
+	}
+	filePath := filepath.Join(subDir, "nested_upload.mp4")
+	if err := os.WriteFile(filePath, []byte("data"), 0644); err != nil {
+		t.Fatalf("failed to create test file: %v", err)
+	}
+
+	repo := NewMockRepo()
+	// Add remote file that needs downloading under a subfolder
+	nestedRemotePath := filepath.Join("download_subfolder", "nested_download.mp4")
+	cloud := &MockCloudStoragePort{
+		remoteFiles: []domain.RemoteFile{
+			{ID: "remote-id-nested", Name: nestedRemotePath, Size: 4, MTime: time.Now()},
+		},
+	}
+	coordinator := NewSyncCoordinator(repo, cloud)
+
+	mappings := []domain.SyncFolderMapping{
+		{LocalPath: tempDir, DriveFolderID: "folder-123"},
+	}
+
+	progressChan := make(chan SyncProgress, 10)
+	ctx := context.Background()
+
+	// Run Sync in background
+	go coordinator.Sync(ctx, mappings, progressChan)
+
+	var startEvents, completeEvents int
+	var errors []error
+
+	for p := range progressChan {
+		switch p.Type {
+		case ProgressStart:
+			startEvents++
+		case ProgressUpdate:
+		case ProgressComplete:
+			completeEvents++
+		case ProgressError:
+			errors = append(errors, p.Error)
+		}
+	}
+
+	if len(errors) > 0 {
+		t.Fatalf("sync generated errors: %v", errors)
+	}
+
+	// We expect 2 sync actions (1 upload, 1 download)
+	if startEvents != 2 {
+		t.Errorf("expected 2 start events, got %d", startEvents)
+	}
+	if completeEvents != 2 {
+		t.Errorf("expected 2 complete events, got %d", completeEvents)
+	}
+
+	// Verify local downloaded file exists in the correct subfolder
+	downloadedPath := filepath.Join(tempDir, nestedRemotePath)
+	if _, err := os.Stat(downloadedPath); os.IsNotExist(err) {
+		t.Errorf("expected downloaded nested file to exist locally at %s", downloadedPath)
+	}
+
+	// Verify the upload API was called with the correct relative path
+	if len(cloud.uploadedFiles) != 1 {
+		t.Fatalf("expected 1 uploaded file, got %d", len(cloud.uploadedFiles))
+	}
+	upInfo := cloud.uploadedFiles[0]
+	expectedRelPath := filepath.Join("upload_subfolder", "nested_upload.mp4")
+	if upInfo.RelativePath != expectedRelPath {
+		t.Errorf("expected relative path %s, got %s", expectedRelPath, upInfo.RelativePath)
+	}
+
+	// Verify DB status is synced for both
+	metaUpload, _ := repo.FindByPath(ctx, filePath)
+	if metaUpload == nil {
+		t.Fatal("expected upload file metadata to be saved in repo")
+	}
+	if metaUpload.Status != domain.StatusSynced {
+		t.Errorf("expected upload file to be synced, got %s", metaUpload.Status)
+	}
+
+	metaDownload, _ := repo.FindByPath(ctx, downloadedPath)
+	if metaDownload == nil {
+		t.Fatal("expected download file metadata to be saved in repo")
+	}
 	if metaDownload.Status != domain.StatusSynced {
 		t.Errorf("expected download file to be synced, got %s", metaDownload.Status)
 	}
