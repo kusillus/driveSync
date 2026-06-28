@@ -1,0 +1,8 @@
+# Credenciales del proyecto en Google Cloud Console (API de Google Drive)
+client_id: "TU_GOOGLE_CLIENT_ID"
+client_secret: "TU_GOOGLE_CLIENT_SECRET"
+
+# Carpetas a sincronizar (Sincronización Selectiva Manual)
+sync_folders:
+  - local_path: "/home/usuario/Videos/GoPro"
+    drive_folder_id: "1abc123XYZ_ID_DE_LA_CARPETA_REMOTA_EN_DRIVE"
