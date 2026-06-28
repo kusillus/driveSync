@@ -46,4 +46,4 @@
 
 ## 8. Documentación
 
-- [ ] 8.1 Crear `README.md` detallado explicando cómo crear el proyecto en Google Cloud Console, obtener las credenciales de OAuth, configurar `config.yaml` y atajos de teclado
+- [x] 8.1 Crear `README.md` detallado explicando cómo crear el proyecto en Google Cloud Console, obtener las credenciales de OAuth, configurar `config.yaml` y atajos de teclado
