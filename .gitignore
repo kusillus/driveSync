@@ -1,0 +1,13 @@
+# Agent / IDE config dirs
+.agent/
+.claude/
+.gemini/
+.opencode/
+
+# Compiled binaries
+drivesync
+
+# Local database & config files
+*.db
+config.yaml
+token.json
