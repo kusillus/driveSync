@@ -13,9 +13,9 @@
 
 ## 3. SQLite Metadata Adapter
 
-- [ ] 3.1 Implementar inicialización de base de datos SQLite y creación de tabla `file_metadata`
-- [ ] 3.2 Implementar adaptador `SqliteMetadataRepository` que implemente la interfaz `MetadataRepository` utilizando el driver en Go puro `modernc.org/sqlite`
-- [ ] 3.3 Escribir tests unitarios para verificar inserciones, actualizaciones y listado de archivos en SQLite
+- [x] 3.1 Implementar inicialización de base de datos SQLite y creación de tabla `file_metadata`
+- [x] 3.2 Implementar adaptador `SqliteMetadataRepository` que implemente la interfaz `MetadataRepository` utilizando el driver en Go puro `modernc.org/sqlite`
+- [x] 3.3 Escribir tests unitarios para verificar inserciones, actualizaciones y listado de archivos en SQLite
 
 ## 4. Google Drive Cloud Adapter
 
